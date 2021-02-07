@@ -14,9 +14,6 @@ library Shared {
         uint dateMounted;
         uint lastRepaired; // Will this be necessary?
     } 
-}
- 
-contract CarRepairContract {
     
     struct CarRepair {
         address payable repairer;
@@ -26,9 +23,12 @@ contract CarRepairContract {
         bool isApproved;
         bool isDone;
     }
+}
+ 
+contract CarRepairContract {
     
     address payable wallet;
-    mapping (address => CarRepair) repairs;
+    mapping (address => Shared.CarRepair) repairs;
     
     constructor() {
         wallet = msg.sender;
@@ -39,7 +39,7 @@ contract CarRepairContract {
         require(msg.value == 1 ether, "You should send 1 ether!");
         (bool success, ) = wallet.call{value: msg.value}("");
         require(success, "Transfer failed.");
-        CarRepair storage carRepair = repairs[carAddress];
+        Shared.CarRepair storage carRepair = repairs[carAddress];
         carRepair.repairer = msg.sender;
         for (uint i = 0; i < parts.length; i++) {
             carRepair.parts.push(parts[i]);
@@ -50,7 +50,7 @@ contract CarRepairContract {
         carRepair.isApproved = false;
     }
     
-    function getCarRepair() public view returns(CarRepair memory){
+    function getCarRepair() public view returns(Shared.CarRepair memory){
         require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
         return repairs[msg.sender];
     }
@@ -92,14 +92,9 @@ contract AutoHistory {
     struct Car {
         bool exists; // used to check whether the car exists
         uint256 kilometers;
-        Repair[] repairs;
+        Shared.CarRepair[] repairs;
         Crash[] crashes;
         Shared.Part[] parts;
-    }
-    
-    struct Repair {
-        uint256 price;
-        string description;
     }
     
     struct Crash {
@@ -122,7 +117,7 @@ contract AutoHistory {
     * 
     * TODO: get crash history
     */
-    function getHistory() view public returns (Repair[] memory, Crash[] memory) {
+    function getHistory() view public returns (Shared.CarRepair[] memory, Crash[] memory) {
         require(carExists(msg.sender), "Car does not exist");
         
         return (cars[msg.sender].repairs, cars[msg.sender].crashes);
@@ -152,12 +147,6 @@ contract AutoHistory {
             
             newCar.parts.push(newPart);
         }
-    }
-    
-    function addRepair(uint256 price, string memory description) public {
-        require(carExists(msg.sender), "Car does not exist");
-        
-        cars[msg.sender].repairs.push(Repair(price, description));
     }
     
     function addCrash(string memory dateTime, string memory description) public {
