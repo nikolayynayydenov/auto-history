@@ -16,7 +16,8 @@ library Shared {
     }
     
     struct CarRepair {
-        address payable repairer;
+        address payable carService;
+        uint256 carServiceStake;
         Part[] parts;
         uint256 price;
         bool isConfirmed;
@@ -28,22 +29,39 @@ library Shared {
 
 
 contract CarRepairContract {
-    address payable wallet;
+    
+    address payable owner;
+    uint256 carServiceStake;
     mapping (address => Shared.CarRepair) repairs;
     
-    constructor() {
-        wallet = msg.sender;
+    
+    constructor(uint256 _carServiceStake) payable {
+        owner = msg.sender;
+        carServiceStake = _carServiceStake;
     }
     
-    event addNewRepairEvent(address repairer, address car, Shared.Part[] parts, uint256 price);
+    modifier isOwner() {
+        require(msg.sender == owner, "Caller is not owner");
+        _;
+    }
+    
+    function setCarServiceStake(uint256 _carServiceStake) public isOwner {
+        carServiceStake = _carServiceStake;
+    }
+    
+    function getCarServiceStake() public view returns(uint256) {
+        return carServiceStake;
+    }
+    
+    event addNewRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function addNewRepair(address carAddress, Shared.Part[] memory parts, uint256 price) public payable {
-        require(repairs[carAddress].repairer == address(0x0), "There is a car repair for that car!");
-        require(msg.value == 1 ether, "You should send 1 ether!");
-        (bool success, ) = wallet.call{value: msg.value}("");
-        require(success, "Transfer failed.");
+        require(repairs[carAddress].carService == address(0x0), "There is a car repair for that car!");
+        require(msg.value == carServiceStake, "You should send car service stake!");
+        
         Shared.CarRepair storage carRepair = repairs[carAddress];
-        carRepair.repairer = msg.sender;
+        carRepair.carService = msg.sender;
+        carRepair.carServiceStake = msg.value;
         for (uint i = 0; i < parts.length; i++) {
             carRepair.parts.push(parts[i]);
         }
@@ -55,30 +73,34 @@ contract CarRepairContract {
         emit addNewRepairEvent(msg.sender, carAddress, parts, price);
     }
     
-    function getCarRepair() public view returns(Shared.CarRepair memory){
-        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+    function getCarRepair() public view returns(Shared.CarRepair memory) {
+        require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         return repairs[msg.sender];
     }
     
-    function confirmCarRepair() public {
-        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+     event confirmCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
+    
+    function confirmCarRepair() public payable {
+        require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
+        require(repairs[msg.sender].price == msg.value, "Send right value!");
         repairs[msg.sender].isConfirmed = true;
+        emit confirmCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
     }
     
-    event carRepairDoneEvent(address repairer, address car, Shared.Part[] parts, uint256 price);
+    event carRepairDoneEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function carRepairDone(address carAddress) public {
-        require(repairs[carAddress].repairer != address(0x0), "There isn't car repair for that car!");
-        require(msg.sender == repairs[carAddress].repairer, "No permission to do that!");
+        require(repairs[carAddress].carService != address(0x0), "There isn't car repair for that car!");
+        require(msg.sender == repairs[carAddress].carService, "No permission to do that!");
         require(repairs[carAddress].isConfirmed == true, "Car should confirm the car repair first!");
         repairs[carAddress].isDone = true;
         emit carRepairDoneEvent(msg.sender, carAddress, repairs[carAddress].parts, repairs[carAddress].price);
     }
     
-    event inspectCarRepairEvent(address repairer, address car, bool isApproved);
+    event approvedCarRepairEvent(address carService, address car, bool isApproved);
     
     function inspectCarRepair(Shared.Part[] memory parts) public  {
-        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+        require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
         require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
         uint matching_parts = 0;
@@ -92,17 +114,17 @@ contract CarRepairContract {
         }
         repairs[msg.sender].isApproved = matching_parts == parts.length;
         repairs[msg.sender].isInspected = true;
-        emit inspectCarRepairEvent(repairs[msg.sender].repairer, msg.sender, repairs[msg.sender].isApproved);
+        emit approvedCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].isApproved);
+        finishCarRepair(msg.sender);
     }
     
-    function finishCarRepair(address payable car) public payable {
-        require(repairs[car].repairer != address(0x0), "There isn't car repair for that car!");
+    function finishCarRepair(address payable car) private {
+        require(repairs[car].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[car].isConfirmed, "Car should confirm the car repair first!");
         require(repairs[car].isDone, "Car repair should be done before approve it.");
         require(repairs[car].isInspected, "Car repair should be inspected before finish it!");
-        require(msg.sender == wallet, "You don't have permission");
         if (repairs[car].isApproved) {
-            repairs[car].repairer.transfer(1 ether + repairs[car].price);
+            repairs[car].carService.transfer(repairs[car].carServiceStake + repairs[car].price);
         } else {
             car.transfer(repairs[car].price);
         }
