@@ -4,20 +4,23 @@ pragma solidity >=0.7.0 <0.8.0;
 pragma abicoder v2;
 
 /**
- * TODO: everybody can change everybody's car data - fix this
  * TODO: add kill switch?
  */
  
-contract CarRepairContract {
+library Shared {
     struct Part {
         string id;
         string name;
-        string dateMounted;
-    }
+        uint dateMounted;
+        uint lastRepaired; // Will this be necessary?
+    } 
+}
+ 
+contract CarRepairContract {
     
     struct CarRepair {
         address payable repairer;
-        Part[] parts;
+        Shared.Part[] parts;
         uint256 price;
         bool isConfirmed;
         bool isApproved;
@@ -31,7 +34,7 @@ contract CarRepairContract {
         wallet = msg.sender;
     }
     
-    function addNewRepair(address carAddress, Part[] memory parts, uint256 price) public payable {
+    function addNewRepair(address carAddress, Shared.Part[] memory parts, uint256 price) public payable {
         require(repairs[carAddress].repairer == address(0x0), "There is a car repair for that car!");
         require(msg.value == 1 ether, "You should send 1 ether!");
         (bool success, ) = wallet.call{value: msg.value}("");
@@ -64,7 +67,7 @@ contract CarRepairContract {
         repairs[carAddress].isDone = true;
     }
     
-    function approveCarRepair(Part[] memory parts) public {
+    function approveCarRepair(Shared.Part[] memory parts) public {
         require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
         require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
@@ -91,7 +94,7 @@ contract AutoHistory {
         uint256 kilometers;
         Repair[] repairs;
         Crash[] crashes;
-        Part[] parts;
+        Shared.Part[] parts;
     }
     
     struct Repair {
@@ -105,14 +108,7 @@ contract AutoHistory {
         // TODO: add damaged parts
     }
     
-    struct Part {
-        string id;
-        string name;
-        uint dateMounted;
-        uint lastRepaired; // Will this be necessary?
-    }
-    
-    event oldPartFound(string vin, Part part);
+    //event oldPartFound(address adr, Shared.Part part);
     
     string[] private defaultParts = [
         "engine", "brakes", "ignition", "tyres", "suspension", 
@@ -126,10 +122,10 @@ contract AutoHistory {
     * 
     * TODO: get crash history
     */
-    function getHistory() view public returns (Repair[] memory) {
+    function getHistory() view public returns (Repair[] memory, Crash[] memory) {
         require(carExists(msg.sender), "Car does not exist");
         
-        return cars[msg.sender].repairs;
+        return (cars[msg.sender].repairs, cars[msg.sender].crashes);
     
     }
      
@@ -148,7 +144,7 @@ contract AutoHistory {
             // TODO: how to fill id and date mounted?
             // Date mounted - for now we assume the car is new and use current date
             
-            Part memory newPart;
+            Shared.Part memory newPart;
             newPart.id = "sample id";
             newPart.name = defaultParts[i];
             newPart.dateMounted = block.timestamp;
