@@ -8,7 +8,7 @@ pragma abicoder v2;
  * TODO: add kill switch?
  */
  
- contract CarRepairContract {
+contract CarRepairContract {
     struct Part {
         string id;
         string name;
@@ -16,36 +16,75 @@ pragma abicoder v2;
     }
     
     struct CarRepair {
-        address repairer;
+        address payable repairer;
         Part[] parts;
         uint256 price;
-        bool approved;
+        bool isConfirmed;
+        bool isApproved;
+        bool isDone;
     }
     
     address payable wallet;
-    mapping (string => CarRepair) repairs;
+    mapping (address => CarRepair) repairs;
     
     constructor() {
         wallet = msg.sender;
     }
     
-    function addNewRepair(string memory vin, Part[] memory parts, uint256 price) public payable {
-        require(repairs[vin].repairer == address(0x0), "There is a car repair for that car!");
+    function addNewRepair(address carAddress, Part[] memory parts, uint256 price) public payable {
+        require(repairs[carAddress].repairer == address(0x0), "There is a car repair for that car!");
         require(msg.value == 1 ether, "You should send 1 ether!");
-        wallet.transfer(msg.value);
-        CarRepair storage carRepair = repairs[vin];
+        (bool success, ) = wallet.call{value: msg.value}("");
+        require(success, "Transfer failed.");
+        CarRepair storage carRepair = repairs[carAddress];
         carRepair.repairer = msg.sender;
         for (uint i = 0; i < parts.length; i++) {
             carRepair.parts.push(parts[i]);
         }
         carRepair.price = price;
-        carRepair.approved = false;
-        msg.sender.call()
+        carRepair.isConfirmed = false;
+        carRepair.isDone = false;
+        carRepair.isApproved = false;
     }
     
+    function getCarRepair() public view returns(CarRepair memory){
+        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+        return repairs[msg.sender];
+    }
     
+    function confirmCarRepair() public {
+        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+        repairs[msg.sender].isConfirmed = true;
+    }
+    
+    function carRepairDone(address carAddress) public {
+        require(repairs[carAddress].repairer != address(0x0), "There isn't car repair for that car!");
+        require(msg.sender == repairs[carAddress].repairer, "No permission to do that!");
+        require(repairs[carAddress].isConfirmed == true, "Car should confirm the car repair first!");
+        repairs[carAddress].isDone = true;
+    }
+    
+    function approveCarRepair(Part[] memory parts) public {
+        require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
+        require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
+        require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
+        uint matching_parts = 0;
+        for (uint i = 0; i < repairs[msg.sender].parts.length; i++) {
+            for (uint j = 0; j < parts.length; j++) {
+                if (keccak256(abi.encodePacked(repairs[msg.sender].parts[i].id)) == keccak256(abi.encodePacked(parts[j].id))) {
+                    matching_parts++;
+                    break;
+                }
+            }
+        }
+        if (matching_parts == parts.length) {
+            repairs[msg.sender].repairer.transfer(1 ether + repairs[msg.sender].price);
+        } else {
+            msg.sender.transfer(1 ether + repairs[msg.sender].price);
+        }
+        
+    }
 }
- 
 contract AutoHistory {
     struct Car {
        string vin;
