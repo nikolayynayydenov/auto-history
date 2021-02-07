@@ -7,6 +7,44 @@ pragma abicoder v2;
  * TODO: everybody can change everybody's car data - fix this
  * TODO: add kill switch?
  */
+ 
+ contract CarRepairContract {
+    struct Part {
+        string id;
+        string name;
+        string dateMounted;
+    }
+    
+    struct CarRepair {
+        address repairer;
+        Part[] parts;
+        uint256 price;
+        bool approved;
+    }
+    
+    address payable wallet;
+    mapping (string => CarRepair) repairs;
+    
+    constructor() {
+        wallet = msg.sender;
+    }
+    
+    function addNewRepair(string memory vin, Part[] memory parts, uint256 price) public payable {
+        require(repairs[vin].repairer == address(0x0), "There is a car repair for that car!");
+        require(msg.value == 1 ether, "You should send 1 ether!");
+        wallet.transfer(msg.value);
+        CarRepair storage carRepair = repairs[vin];
+        carRepair.repairer = msg.sender;
+        for (uint i = 0; i < parts.length; i++) {
+            carRepair.parts.push(parts[i]);
+        }
+        carRepair.price = price;
+        carRepair.approved = false;
+    }
+    
+    
+}
+ 
 contract AutoHistory {
     struct Car {
        string vin;
@@ -60,7 +98,7 @@ contract AutoHistory {
         return bytes(cars[vin].vin).length > 0;
     }
      
-     function addCar(string memory vin, uint256 kilometers) public {
+    function addCar(string memory vin, uint256 kilometers) public {
         require(!carExists(vin), "Car already exists");
          
         Car storage newCar = cars[vin];
