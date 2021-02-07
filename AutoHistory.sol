@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity >=0.7.0 <0.8.0;
+pragma abicoder v2;
 
 /**
- *  TODO: everybody can change everybody's car data - fix this
+ * TODO: everybody can change everybody's car data - fix this
+ * TODO: add kill switch?
  */
 contract AutoHistory {
     struct Car {
        string vin;
        uint256 kilometers;
        Repair[] repairs;
+       address owner;
     }
     
     struct Repair {
@@ -20,11 +23,16 @@ contract AutoHistory {
     mapping (string => Car) private cars;
     
     /**
-     * Get a car's repair + crash history
-     */
-     function getHistory(string memory vin) view public  {
-         
-     }
+    * Get a car's repair + crash history
+    * 
+    * TODO: get crash history
+    */
+    function getHistory(string memory vin) view public returns (Repair[] memory) {
+        require(carExists(vin), "Car does not exist");
+        
+        return cars[vin].repairs;
+    
+    }
      
     function carExists(string memory vin) private view returns (bool) {
         return bytes(cars[vin].vin).length > 0;
