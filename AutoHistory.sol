@@ -19,6 +19,7 @@ pragma abicoder v2;
         address repairer;
         Part[] parts;
         uint256 price;
+        bool approved;
     }
     
     address payable wallet;
@@ -38,6 +39,7 @@ pragma abicoder v2;
             carRepair.parts.push(parts[i]);
         }
         carRepair.price = price;
+        carRepair.approved = false;
     }
     
     
@@ -47,11 +49,7 @@ contract AutoHistory {
     struct Car {
        string vin;
        uint256 kilometers;
-<<<<<<< HEAD
       Repair[] repairs;
-=======
-       Repair[] repairs;
->>>>>>> 4d31a416082f17d09182b721223fc555c40ba246
        Crash[] crashes;
        address owner;
     }
@@ -85,7 +83,7 @@ contract AutoHistory {
         return bytes(cars[vin].vin).length > 0;
     }
      
-     function addCar(string memory vin, uint256 kilometers) public {
+    function addCar(string memory vin, uint256 kilometers) public {
         require(!carExists(vin), "Car already exists");
          
         Car storage newCar = cars[vin];
