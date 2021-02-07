@@ -215,6 +215,7 @@ contract AutoHistory {
         
         return oldParts;
     }
+<<<<<<< HEAD
 }
 
 
@@ -228,3 +229,6 @@ contract AutoHistory {
 
 
 
+=======
+}
+>>>>>>> 33c2084635e3a51d15dd04d955021824dae49325
