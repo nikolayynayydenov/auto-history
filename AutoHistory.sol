@@ -87,12 +87,11 @@ contract CarRepairContract {
 }
 contract AutoHistory {
     struct Car {
-       string vin;
-       uint256 kilometers;
-       address owner;
-       Repair[] repairs;
-       Crash[] crashes;
-       Part[] parts;
+        bool exists; // used to check whether the car exists
+        uint256 kilometers;
+        Repair[] repairs;
+        Crash[] crashes;
+        Part[] parts;
     }
     
     struct Repair {
@@ -120,31 +119,30 @@ contract AutoHistory {
         "heat pump", "mirrors", "headlights", "headlights", "taillights"
     ]; // will be assigned to every newly added car
     
-    mapping (string => Car) private cars;
+    mapping (address => Car) private cars;
     
     /**
     * Get a car's repair + crash history
     * 
     * TODO: get crash history
     */
-    function getHistory(string memory vin) view public returns (Repair[] memory) {
-        require(carExists(vin), "Car does not exist");
+    function getHistory() view public returns (Repair[] memory) {
+        require(carExists(msg.sender), "Car does not exist");
         
-        return cars[vin].repairs;
+        return cars[msg.sender].repairs;
     
     }
      
-    function carExists(string memory vin) private view returns (bool) {
-        return bytes(cars[vin].vin).length > 0;
+    function carExists(address adr) private view returns (bool) {
+        return cars[adr].exists;
     }
      
-    function addCar(string memory vin, uint256 kilometers) public {
-        require(!carExists(vin), "Car already exists");
+    function addCar(uint256 kilometers) public {
+        require(!carExists(msg.sender), "Car already exists");
          
-        Car storage newCar = cars[vin];
-        newCar.vin = vin;
+        Car storage newCar = cars[msg.sender];
+        newCar.exists = true;
         newCar.kilometers = kilometers;
-        newCar.owner = msg.sender;
         
         for(uint i = 0; i < defaultParts.length; i++) {
             // TODO: how to fill id and date mounted?
@@ -160,39 +158,39 @@ contract AutoHistory {
         }
     }
     
-    function addRepair(string memory vin, uint256 price, string memory description) public {
-        require(carExists(vin), "Car does not exist");
+    function addRepair(uint256 price, string memory description) public {
+        require(carExists(msg.sender), "Car does not exist");
         
-        cars[vin].repairs.push(Repair(price, description));
+        cars[msg.sender].repairs.push(Repair(price, description));
     }
     
-    function addCrash(string memory vin, string memory dateTime, string memory description) public {
-        require(carExists(vin), "Car does not exist");
+    function addCrash(string memory dateTime, string memory description) public {
+        require(carExists(msg.sender), "Car does not exist");
         
-        cars[vin].crashes.push(Crash(dateTime, description));
+        cars[msg.sender].crashes.push(Crash(dateTime, description));
     }
      
-    function setKilometers(string memory vin, uint256 kilometers) public {
-        require(carExists(vin), "Car does not exist");
+    function setKilometers(uint256 kilometers) public {
+        require(carExists(msg.sender), "Car does not exist");
         
-        cars[vin].kilometers = kilometers;
+        cars[msg.sender].kilometers = kilometers;
     }
     
     /**
      * Check if any part of a car has not been changed or repaired for a long time
      * Emit events if there is anything irregullar
      */
-    function checkParts(string memory vin) public view returns (string[] memory) {
-        require(carExists(vin), "Car does not exist");
+    function checkParts() public view returns (string[] memory) {
+        require(carExists(msg.sender), "Car does not exist");
         
         uint oldPartsCount = 0;
               
-        for(uint i = 0; i < cars[vin].parts.length; i++) {
+        for(uint i = 0; i < cars[msg.sender].parts.length; i++) {
             // 157680000 = 5 years in seconds
             if (
-                block.timestamp - cars[vin].parts[i].dateMounted > 157680000 || 
-                cars[vin].parts[i].lastRepaired != 0 &&
-                block.timestamp - cars[vin].parts[i].lastRepaired > 157680000
+                block.timestamp - cars[msg.sender].parts[i].dateMounted > 157680000 || 
+                cars[msg.sender].parts[i].lastRepaired != 0 &&
+                block.timestamp - cars[msg.sender].parts[i].lastRepaired > 157680000
             ) {
                 oldPartsCount++;
             }
@@ -200,35 +198,19 @@ contract AutoHistory {
         
         string[] memory oldParts = new string[](oldPartsCount);
         
-        for(uint i = 0; i < cars[vin].parts.length; i++) {
+        for(uint i = 0; i < cars[msg.sender].parts.length; i++) {
             // 157680000 = 5 years in seconds
             if (
-                block.timestamp - cars[vin].parts[i].dateMounted > 157680000 || 
-                cars[vin].parts[i].lastRepaired != 0 &&
-                block.timestamp - cars[vin].parts[i].lastRepaired > 157680000
+                block.timestamp - cars[msg.sender].parts[i].dateMounted > 157680000 || 
+                cars[msg.sender].parts[i].lastRepaired != 0 &&
+                block.timestamp - cars[msg.sender].parts[i].lastRepaired > 157680000
             ) {
                 // if a part hasn't been repaired in 5 years
-                oldParts[i] = cars[vin].parts[i].name;
-                //emit oldPartFound(vin, cars[vin].parts[i]);
+                oldParts[i] = cars[msg.sender].parts[i].name;
+                //emit oldPartFound(msg.sender, cars[vin].parts[i]);
             }
         }
         
         return oldParts;
     }
-<<<<<<< HEAD
 }
-
-
-
-
-
-
-
-
-
-
-
-
-=======
-}
->>>>>>> 33c2084635e3a51d15dd04d955021824dae49325
