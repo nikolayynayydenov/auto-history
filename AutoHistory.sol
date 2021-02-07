@@ -12,12 +12,19 @@ contract AutoHistory {
        string vin;
        uint256 kilometers;
        Repair[] repairs;
+       Crash[] crashes;
        address owner;
     }
     
     struct Repair {
         uint256 price;
         string description;
+    }
+    
+    struct Crash {
+        string dateTime;
+        string description;
+        // TODO: add damaged parts
     }
     
     mapping (string => Car) private cars;
@@ -45,11 +52,17 @@ contract AutoHistory {
         newCar.vin = vin;
         newCar.kilometers = kilometers;
     }
-    // Kolio
+    
     function addRepair(string memory vin, uint256 price, string memory description) public {
         require(carExists(vin), "Car does not exist");
         
         cars[vin].repairs.push(Repair(price, description));
+    }
+    
+    function addCrash(string memory vin, string memory dateTime, string memory description) public {
+        require(carExists(vin), "Car does not exist");
+        
+        cars[vin].crashes.push(Crash(dateTime, description));
     }
      
     function setKilometers(string memory vin, uint256 kilometers) public {
