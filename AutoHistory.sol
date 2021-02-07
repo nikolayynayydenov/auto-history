@@ -4,30 +4,12 @@ pragma solidity >=0.7.0 <0.8.0;
 pragma abicoder v2;
 
 /**
+ * TODO: everybody can change everybody's car data - fix this
  * TODO: add kill switch?
  */
  
 library Shared {
-    struct Part {
-        string id;
-        string name;
-        uint dateMounted;
-        uint lastRepaired; // Will this be necessary?
-    } 
-    
-    struct CarRepair {
-        address payable repairer;
-        Shared.Part[] parts;
-        uint256 price;
-        bool isConfirmed;
-        bool isApproved;
-        bool isDone;
-        bool isInspected;
-    }
-}
- 
-contract CarRepairContract {
-    struct Part {
+     struct Part {
         string id;
         string name;
         string dateMounted;
@@ -42,22 +24,25 @@ contract CarRepairContract {
         bool isDone;
         bool isInspected;
     }
-    
+}
+
+
+contract CarRepairContract {
     address payable wallet;
-    mapping (address => CarRepair) repairs;
+    mapping (address => Shared.CarRepair) repairs;
     
     constructor() {
         wallet = msg.sender;
     }
     
-    event addNewRepairEvent(address repairer, address car, Part[] parts, uint256 price);
+    event addNewRepairEvent(address repairer, address car, Shared.Part[] parts, uint256 price);
     
-    function addNewRepair(address carAddress, Part[] memory parts, uint256 price) public payable {
+    function addNewRepair(address carAddress, Shared.Part[] memory parts, uint256 price) public payable {
         require(repairs[carAddress].repairer == address(0x0), "There is a car repair for that car!");
         require(msg.value == 1 ether, "You should send 1 ether!");
         (bool success, ) = wallet.call{value: msg.value}("");
         require(success, "Transfer failed.");
-        CarRepair storage carRepair = repairs[carAddress];
+        Shared.CarRepair storage carRepair = repairs[carAddress];
         carRepair.repairer = msg.sender;
         for (uint i = 0; i < parts.length; i++) {
             carRepair.parts.push(parts[i]);
@@ -70,7 +55,7 @@ contract CarRepairContract {
         emit addNewRepairEvent(msg.sender, carAddress, parts, price);
     }
     
-    function getCarRepair() public view returns(CarRepair memory){
+    function getCarRepair() public view returns(Shared.CarRepair memory){
         require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
         return repairs[msg.sender];
     }
@@ -80,7 +65,7 @@ contract CarRepairContract {
         repairs[msg.sender].isConfirmed = true;
     }
     
-    event carRepairDoneEvent(address repairer, address car, Part[] parts, uint256 price);
+    event carRepairDoneEvent(address repairer, address car, Shared.Part[] parts, uint256 price);
     
     function carRepairDone(address carAddress) public {
         require(repairs[carAddress].repairer != address(0x0), "There isn't car repair for that car!");
@@ -92,7 +77,7 @@ contract CarRepairContract {
     
     event inspectCarRepairEvent(address repairer, address car, bool isApproved);
     
-    function inspectCarRepair(Part[] memory parts) public  {
+    function inspectCarRepair(Shared.Part[] memory parts) public  {
         require(repairs[msg.sender].repairer != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
         require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
@@ -127,7 +112,6 @@ contract CarRepairContract {
 
 contract AutoHistory {
     struct Car {
-<<<<<<< HEAD
        string vin;
        uint256 kilometers;
        address owner;
@@ -139,13 +123,6 @@ contract AutoHistory {
     struct Repair {
         uint256 price;
         string description;
-=======
-        bool exists; // used to check whether the car exists
-        uint256 kilometers;
-        Shared.CarRepair[] repairs;
-        Crash[] crashes;
-        Shared.Part[] parts;
->>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
     }
     
     struct Crash {
@@ -154,7 +131,14 @@ contract AutoHistory {
         // TODO: add damaged parts
     }
     
-    //event oldPartFound(address adr, Shared.Part part);
+    struct Part {
+        string id;
+        string name;
+        uint dateMounted;
+        uint lastRepaired; // Will this be necessary?
+    }
+    
+    event oldPartFound(string vin, Part part);
     
     string[] private defaultParts = [
         "engine", "brakes", "ignition", "tyres", "suspension", 
@@ -168,17 +152,10 @@ contract AutoHistory {
     * 
     * TODO: get crash history
     */
-<<<<<<< HEAD
     function getHistory(string memory vin) view public returns (Repair[] memory) {
         require(carExists(vin), "Car does not exist");
         
         return cars[vin].repairs;
-=======
-    function getHistory() view public returns (Shared.CarRepair[] memory, Crash[] memory) {
-        require(carExists(msg.sender), "Car does not exist");
-        
-        return (cars[msg.sender].repairs, cars[msg.sender].crashes);
->>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
     
     }
      
@@ -198,7 +175,7 @@ contract AutoHistory {
             // TODO: how to fill id and date mounted?
             // Date mounted - for now we assume the car is new and use current date
             
-            Shared.Part memory newPart;
+            Part memory newPart;
             newPart.id = "sample id";
             newPart.name = defaultParts[i];
             newPart.dateMounted = block.timestamp;
@@ -208,7 +185,6 @@ contract AutoHistory {
         }
     }
     
-<<<<<<< HEAD
     function addRepair(string memory vin, uint256 price, string memory description) public {
         require(carExists(vin), "Car does not exist");
         
@@ -217,10 +193,6 @@ contract AutoHistory {
     
     function addCrash(string memory vin, string memory dateTime, string memory description) public {
         require(carExists(vin), "Car does not exist");
-=======
-    function addCrash(string memory dateTime, string memory description) public {
-        require(carExists(msg.sender), "Car does not exist");
->>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
         
         cars[vin].crashes.push(Crash(dateTime, description));
     }
