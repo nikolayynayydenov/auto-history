@@ -4,9 +4,27 @@ pragma solidity >=0.7.0 <0.8.0;
 pragma abicoder v2;
 
 /**
- * TODO: everybody can change everybody's car data - fix this
  * TODO: add kill switch?
  */
+ 
+library Shared {
+    struct Part {
+        string id;
+        string name;
+        uint dateMounted;
+        uint lastRepaired; // Will this be necessary?
+    } 
+    
+    struct CarRepair {
+        address payable repairer;
+        Shared.Part[] parts;
+        uint256 price;
+        bool isConfirmed;
+        bool isApproved;
+        bool isDone;
+        bool isInspected;
+    }
+}
  
 contract CarRepairContract {
     struct Part {
@@ -109,6 +127,7 @@ contract CarRepairContract {
 
 contract AutoHistory {
     struct Car {
+<<<<<<< HEAD
        string vin;
        uint256 kilometers;
        address owner;
@@ -120,6 +139,13 @@ contract AutoHistory {
     struct Repair {
         uint256 price;
         string description;
+=======
+        bool exists; // used to check whether the car exists
+        uint256 kilometers;
+        Shared.CarRepair[] repairs;
+        Crash[] crashes;
+        Shared.Part[] parts;
+>>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
     }
     
     struct Crash {
@@ -128,14 +154,7 @@ contract AutoHistory {
         // TODO: add damaged parts
     }
     
-    struct Part {
-        string id;
-        string name;
-        uint dateMounted;
-        uint lastRepaired; // Will this be necessary?
-    }
-    
-    event oldPartFound(string vin, Part part);
+    //event oldPartFound(address adr, Shared.Part part);
     
     string[] private defaultParts = [
         "engine", "brakes", "ignition", "tyres", "suspension", 
@@ -149,10 +168,17 @@ contract AutoHistory {
     * 
     * TODO: get crash history
     */
+<<<<<<< HEAD
     function getHistory(string memory vin) view public returns (Repair[] memory) {
         require(carExists(vin), "Car does not exist");
         
         return cars[vin].repairs;
+=======
+    function getHistory() view public returns (Shared.CarRepair[] memory, Crash[] memory) {
+        require(carExists(msg.sender), "Car does not exist");
+        
+        return (cars[msg.sender].repairs, cars[msg.sender].crashes);
+>>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
     
     }
      
@@ -172,7 +198,7 @@ contract AutoHistory {
             // TODO: how to fill id and date mounted?
             // Date mounted - for now we assume the car is new and use current date
             
-            Part memory newPart;
+            Shared.Part memory newPart;
             newPart.id = "sample id";
             newPart.name = defaultParts[i];
             newPart.dateMounted = block.timestamp;
@@ -182,6 +208,7 @@ contract AutoHistory {
         }
     }
     
+<<<<<<< HEAD
     function addRepair(string memory vin, uint256 price, string memory description) public {
         require(carExists(vin), "Car does not exist");
         
@@ -190,6 +217,10 @@ contract AutoHistory {
     
     function addCrash(string memory vin, string memory dateTime, string memory description) public {
         require(carExists(vin), "Car does not exist");
+=======
+    function addCrash(string memory dateTime, string memory description) public {
+        require(carExists(msg.sender), "Car does not exist");
+>>>>>>> c504c0b8abe830cebc22eeddff57d670c33cd5bf
         
         cars[vin].crashes.push(Crash(dateTime, description));
     }
