@@ -38,13 +38,12 @@ contract AutoHistory {
         return bytes(cars[vin].vin).length > 0;
     }
      
-    function addCar(string memory vin, uint256 kilometers) public {
+     function addCar(string memory vin, uint256 kilometers) public {
         require(!carExists(vin), "Car already exists");
          
-        Car memory newCar;
+        Car storage newCar = cars[vin];
         newCar.vin = vin;
         newCar.kilometers = kilometers;
-        cars[vin] = newCar;
     }
     
     function addRepair(string memory vin, uint256 price, string memory description) public {
