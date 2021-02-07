@@ -45,7 +45,7 @@ contract AutoHistory {
         newCar.vin = vin;
         newCar.kilometers = kilometers;
     }
-    
+    // Kolio
     function addRepair(string memory vin, uint256 price, string memory description) public {
         require(carExists(vin), "Car does not exist");
         
