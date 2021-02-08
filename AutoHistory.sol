@@ -141,6 +141,7 @@ contract AutoHistory {
         Shared.CarRepair[] repairs;
         Crash[] crashes;
         Shared.Part[] parts;
+        string vin;
     }
     
     struct Crash {
@@ -174,12 +175,13 @@ contract AutoHistory {
         return cars[adr].exists;
     }
      
-    function addCar(uint256 kilometers) public {
+    function addCar(string memory vin, uint256 kilometers) public {
         require(!carExists(msg.sender), "Car already exists");
          
         Car storage newCar = cars[msg.sender];
         newCar.exists = true;
         newCar.kilometers = kilometers;
+        newCar.vin = vin;
         
         for(uint i = 0; i < defaultParts.length; i++) {
             // TODO: how to fill id and date mounted?
