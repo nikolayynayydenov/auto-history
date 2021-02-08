@@ -28,11 +28,9 @@ library Shared {
 
 
 contract CarRepairContract {
-    
     address payable owner;
     uint256 carServiceStake;
     mapping (address => Shared.CarRepair) repairs;
-    
     
     constructor(uint256 _carServiceStake) payable {
         owner = msg.sender;
@@ -54,7 +52,6 @@ contract CarRepairContract {
     
     event addNewRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
-    // OKAY
     function addNewRepair(address carAddress, Shared.Part[] memory parts, uint256 price) public payable {
         require(repairs[carAddress].carService == address(0x0), "There is a car repair for that car!");
         require(msg.value == carServiceStake, "You should send car service stake!");
@@ -73,15 +70,12 @@ contract CarRepairContract {
         emit addNewRepairEvent(msg.sender, carAddress, parts, price);
     }
     
-    
-    //OKAY
+
     function getCarRepair() public view returns(Shared.CarRepair memory) {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         return repairs[msg.sender];
     }
     
-    
-    // OKAY
     event confirmCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function confirmCarRepair() public payable {
@@ -91,8 +85,6 @@ contract CarRepairContract {
         emit confirmCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
     }
     
-    
-    // OKAY
     event declineCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function declineCarRepair() public payable {
@@ -102,8 +94,6 @@ contract CarRepairContract {
         emit declineCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
     }
     
-    
-    // OKAY
     event carRepairDoneEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function carRepairDone(address carAddress) public {
