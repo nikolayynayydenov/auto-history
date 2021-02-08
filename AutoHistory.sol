@@ -8,7 +8,6 @@ library Shared {
         string id;
         string name;
         uint256 lastRepairKilometers;
-        uint256 kilometersToRepairAt;
     }
     
     struct CarRepair {
@@ -158,7 +157,6 @@ contract AutoHistory {
             newPart.id = partIds[i];
             newPart.name = partNames[i];
             newPart.lastRepairKilometers = 0; // default value
-            newPart.kilometersToRepairAt = 0; // default value
             
             newCar.parts.push(newPart);
         }
@@ -177,13 +175,12 @@ contract AutoHistory {
         cars[msg.sender].kilometers = kilometers;
     }
     
-    function setPart(string memory name, string memory id, uint256 lastRepairKilometers, uint256 kilometersToRepairAt) public {
+    function setPart(Shared.Part memory part) public {
         for (uint i = 0; i < cars[msg.sender].parts.length; i++) {
-            if (keccak256(abi.encodePacked(cars[msg.sender].parts[i].name)) == keccak256(abi.encodePacked(name))) {
+            if (keccak256(abi.encodePacked(cars[msg.sender].parts[i].name)) == keccak256(abi.encodePacked(part.name))) {
                 // The part already exists
-                cars[msg.sender].parts[i].id = id;
-                cars[msg.sender].parts[i].lastRepairKilometers = lastRepairKilometers;
-                cars[msg.sender].parts[i].kilometersToRepairAt = kilometersToRepairAt;
+                cars[msg.sender].parts[i].id = part.id;
+                cars[msg.sender].parts[i].lastRepairKilometers = part.lastRepairKilometers;
                 return;
             }
         }
@@ -191,10 +188,9 @@ contract AutoHistory {
         // The part does not exist
         Shared.Part memory newPart;
         
-        newPart.id = id;
-        newPart.name = name;
-        newPart.lastRepairKilometers = lastRepairKilometers; 
-        newPart.kilometersToRepairAt = kilometersToRepairAt;
+        newPart.id = part.id;
+        newPart.name = part.name;
+        newPart.lastRepairKilometers = part.lastRepairKilometers; 
         
         cars[msg.sender].parts.push(newPart);
     }
