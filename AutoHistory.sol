@@ -7,6 +7,10 @@ library Shared {
      struct Part {
         string id;
         string name;
+    }
+    
+    struct MountedPart {
+        Part part;
         uint256 lastRepairKilometers;
     }
     
@@ -50,7 +54,7 @@ contract CarRepairContract {
     
     event addNewRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
-    // TODO: update repaired parts' lastRepairKilometers property
+    // OKAY
     function addNewRepair(address carAddress, Shared.Part[] memory parts, uint256 price) public payable {
         require(repairs[carAddress].carService == address(0x0), "There is a car repair for that car!");
         require(msg.value == carServiceStake, "You should send car service stake!");
@@ -69,12 +73,16 @@ contract CarRepairContract {
         emit addNewRepairEvent(msg.sender, carAddress, parts, price);
     }
     
+    
+    //OKAY
     function getCarRepair() public view returns(Shared.CarRepair memory) {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         return repairs[msg.sender];
     }
     
-     event confirmCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
+    
+    // OKAY
+    event confirmCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function confirmCarRepair() public payable {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
@@ -83,6 +91,19 @@ contract CarRepairContract {
         emit confirmCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
     }
     
+    
+    // OKAY
+    event declineCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
+    
+    function declineCarRepair() public payable {
+        require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
+        repairs[msg.sender].carService.transfer(repairs[msg.sender].carServiceStake);
+        delete repairs[msg.sender];
+        emit declineCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
+    }
+    
+    
+    // OKAY
     event carRepairDoneEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function carRepairDone(address carAddress) public {
@@ -93,9 +114,10 @@ contract CarRepairContract {
         emit carRepairDoneEvent(msg.sender, carAddress, repairs[carAddress].parts, repairs[carAddress].price);
     }
     
-    event approvedCarRepairEvent(address carService, address car, bool isApproved);
+    event approvedCarRepairEvent(address carService, address car, Shared.MountedPart[] mountedParts, uint256 price);
+    event notApprovedCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
-    function inspectCarRepair(Shared.Part[] memory parts) public  {
+    function inspectCarRepair(Shared.Part[] memory parts, uint256 kilometers) public  {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
         require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
@@ -105,14 +127,31 @@ contract CarRepairContract {
                 if (keccak256(abi.encodePacked(repairs[msg.sender].parts[i].id)) == keccak256(abi.encodePacked(parts[j].id))) {
                     matching_parts++;
                     break;
+                    
                 }
             }
         }
+        
         repairs[msg.sender].isApproved = matching_parts == parts.length;
         repairs[msg.sender].isInspected = true;
-        emit approvedCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].isApproved);
+        if (repairs[msg.sender].isApproved) {
+            Shared.MountedPart[] memory mountedParts;
+            for (uint256 i = 0; i < repairs[msg.sender].parts.length; i++) {
+                Shared.MountedPart memory mountedPart;
+                mountedPart.part.name = repairs[msg.sender].parts[i].name;
+                mountedPart.part.id = repairs[msg.sender].parts[i].id;
+                mountedPart.lastRepairKilometers = kilometers;
+            }
+            emit approvedCarRepairEvent(repairs[msg.sender].carService, msg.sender, mountedParts, repairs[msg.sender].price);
+        } else {
+            emit notApprovedCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts,repairs[msg.sender].price);
+        }
+        
         finishCarRepair(msg.sender);
     }
+    
+    event finishedSuccessfulCarRepairEvent(address carService, address car, Shared.MountedPart[] parts, uint256 price);
+    event finishedUnsuccessfulCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
     
     function finishCarRepair(address payable car) private {
         require(repairs[car].carService != address(0x0), "There isn't car repair for that car!");
@@ -133,7 +172,7 @@ contract AutoHistory {
         bool exists;
         string vin;
         uint256 kilometers;
-        Shared.Part[] parts;
+        Shared.MountedPart[] mountedParts;
     }
     
     mapping (address => Car) private cars;
@@ -152,13 +191,13 @@ contract AutoHistory {
         newCar.kilometers = kilometers;
         
         for (uint i = 0; i < partIds.length; i++) {
-            Shared.Part memory newPart;
+            Shared.MountedPart memory newMountedPart;
             
-            newPart.id = partIds[i];
-            newPart.name = partNames[i];
-            newPart.lastRepairKilometers = 0; // default value
+            newMountedPart.part.id = partIds[i];
+            newMountedPart.part.name = partNames[i];
+            newMountedPart.lastRepairKilometers = 0; // default value
             
-            newCar.parts.push(newPart);
+            newCar.mountedParts.push(newMountedPart);
         }
     }
     
@@ -175,23 +214,23 @@ contract AutoHistory {
         cars[msg.sender].kilometers = kilometers;
     }
     
-    function setPart(Shared.Part memory part) public {
-        for (uint i = 0; i < cars[msg.sender].parts.length; i++) {
-            if (keccak256(abi.encodePacked(cars[msg.sender].parts[i].name)) == keccak256(abi.encodePacked(part.name))) {
+    function setPart(Shared.MountedPart memory mountedPart) public {
+        for (uint i = 0; i < cars[msg.sender].mountedParts.length; i++) {
+            if (keccak256(abi.encodePacked(cars[msg.sender].mountedParts[i].part.name)) == keccak256(abi.encodePacked(mountedPart.part.name))) {
                 // The part already exists
-                cars[msg.sender].parts[i].id = part.id;
-                cars[msg.sender].parts[i].lastRepairKilometers = part.lastRepairKilometers;
+                cars[msg.sender].mountedParts[i].part.id = mountedPart.part.id;
+                cars[msg.sender].mountedParts[i].lastRepairKilometers = mountedPart.lastRepairKilometers;
                 return;
             }
         }
         
         // The part does not exist
-        Shared.Part memory newPart;
+        Shared.MountedPart memory newMountedPart;
         
-        newPart.id = part.id;
-        newPart.name = part.name;
-        newPart.lastRepairKilometers = part.lastRepairKilometers; 
+        newMountedPart.part.id = mountedPart.part.id;
+        newMountedPart.part.name =  mountedPart.part.name;
+        newMountedPart.lastRepairKilometers = mountedPart.lastRepairKilometers; 
         
-        cars[msg.sender].parts.push(newPart);
+        cars[msg.sender].mountedParts.push(newMountedPart);
     }
 }
