@@ -2,18 +2,13 @@
 
 pragma solidity >=0.7.0 <0.8.0;
 pragma abicoder v2;
-
-/**
- * TODO: everybody can change everybody's car data - fix this
- * TODO: add kill switch?
- */
  
 library Shared {
      struct Part {
         string id;
         string name;
-        uint256 dateMounted;
         uint256 lastRepairKilometers;
+        uint256 kilometersToRepairAt;
     }
     
     struct CarRepair {
@@ -136,111 +131,71 @@ contract CarRepairContract {
 
 contract AutoHistory {
     struct Car {
-        bool exists; // used to check whether the car exists
-        uint256 kilometers;
-        Shared.CarRepair[] repairs;
-        Crash[] crashes;
-        Shared.Part[] parts;
+        bool exists;
         string vin;
+        uint256 kilometers;
+        Shared.Part[] parts;
     }
-    
-    struct Crash {
-        string dateTime;
-        string description;
-        // TODO: add damaged parts
-    }
-    
-    //event oldPartFound(address adr, Shared.Part part);
-    
-    string[] private defaultParts = [
-        "engine", "brakes", "ignition", "tyres", "suspension", 
-        "heat pump", "mirrors", "headlights", "headlights", "taillights"
-    ]; // will be assigned to every newly added car
     
     mapping (address => Car) private cars;
-    
-    /**
-    * Get a car's repair + crash history
-    * 
-    * TODO: get crash history
-    */
-    function getHistory() view public returns (Shared.CarRepair[] memory, Crash[] memory) {
-        require(carExists(msg.sender), "Car does not exist");
-        
-        return (cars[msg.sender].repairs, cars[msg.sender].crashes);
-    
-    }
      
     function carExists(address adr) private view returns (bool) {
         return cars[adr].exists;
     }
-     
-    function addCar(string memory vin, uint256 kilometers) public {
+    
+    function setCar(uint256 kilometers, string memory vin, string[] memory partIds, string[] memory partNames) public {
         require(!carExists(msg.sender), "Car already exists");
+        require(partIds.length == partNames.length, "Part ids and part names must be of equal length");
          
         Car storage newCar = cars[msg.sender];
         newCar.exists = true;
-        newCar.kilometers = kilometers;
         newCar.vin = vin;
+        newCar.kilometers = kilometers;
         
-        for(uint i = 0; i < defaultParts.length; i++) {
-            // TODO: how to fill id and date mounted?
-            // Date mounted - for now we assume the car is new and use current date
-            
+        for (uint i = 0; i < partIds.length; i++) {
             Shared.Part memory newPart;
-            newPart.id = "sample id";
-            newPart.name = defaultParts[i];
-            newPart.dateMounted = block.timestamp;
-            newPart.lastRepairKilometers = 0; // default value - means no repairs have been made
+            
+            newPart.id = partIds[i];
+            newPart.name = partNames[i];
+            newPart.lastRepairKilometers = 0; // default value
+            newPart.kilometersToRepairAt = 0; // default value
             
             newCar.parts.push(newPart);
         }
     }
     
-    function addCrash(string memory dateTime, string memory description) public {
+    function getCar() public view returns (Car memory) {
         require(carExists(msg.sender), "Car does not exist");
         
-        cars[msg.sender].crashes.push(Crash(dateTime, description));
+        return cars[msg.sender];
     }
      
     function setKilometers(uint256 kilometers) public {
         require(carExists(msg.sender), "Car does not exist");
+        require(kilometers > cars[msg.sender].kilometers, "New kilometers must be a higher value");
         
         cars[msg.sender].kilometers = kilometers;
     }
     
-    /**
-     * Check if any part of a car has not been changed or repaired for a long time
-     * Emit events if there is anything irregullar
-     */
-    function checkParts() public view returns (string[] memory) {
-        require(carExists(msg.sender), "Car does not exist");
-        
-        uint oldPartsCount = 0;
-              
-        for(uint i = 0; i < cars[msg.sender].parts.length; i++) {
-            if (
-                cars[msg.sender].kilometers - cars[msg.sender].parts[i].lastRepairKilometers > 50000 || 
-                cars[msg.sender].parts[i].lastRepairKilometers != 0 &&
-                cars[msg.sender].kilometers - cars[msg.sender].parts[i].lastRepairKilometers > 50000
-            ) {
-                oldPartsCount++;
+    function setPart(string memory name, string memory id, uint256 lastRepairKilometers, uint256 kilometersToRepairAt) public {
+        for (uint i = 0; i < cars[msg.sender].parts.length; i++) {
+            if (keccak256(abi.encodePacked(cars[msg.sender].parts[i].name)) == keccak256(abi.encodePacked(name))) {
+                // The part already exists
+                cars[msg.sender].parts[i].id = id;
+                cars[msg.sender].parts[i].lastRepairKilometers = lastRepairKilometers;
+                cars[msg.sender].parts[i].kilometersToRepairAt = kilometersToRepairAt;
+                return;
             }
         }
         
-        string[] memory oldParts = new string[](oldPartsCount);
+        // The part does not exist
+        Shared.Part memory newPart;
         
-        for(uint i = 0; i < cars[msg.sender].parts.length; i++) {
-            if (
-                cars[msg.sender].kilometers - cars[msg.sender].parts[i].lastRepairKilometers > 50000 || 
-                cars[msg.sender].parts[i].lastRepairKilometers != 0 &&
-                cars[msg.sender].kilometers - cars[msg.sender].parts[i].lastRepairKilometers > 50000
-            ) {
-                oldParts[i] = cars[msg.sender].parts[i].name;
-                //emit oldPartFound(msg.sender, cars[vin].parts[i]);
-            }
-        }
+        newPart.id = id;
+        newPart.name = name;
+        newPart.lastRepairKilometers = lastRepairKilometers; 
+        newPart.kilometersToRepairAt = kilometersToRepairAt;
         
-        return oldParts;
+        cars[msg.sender].parts.push(newPart);
     }
 }
