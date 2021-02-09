@@ -143,9 +143,6 @@ contract CarRepairContract {
         finishCarRepair(msg.sender);
     }
     
-    event finishedSuccessfulCarRepairEvent(address carService, address car, Shared.MountedPart[] parts, uint256 price);
-    event finishedUnsuccessfulCarRepairEvent(address carService, address car, Shared.Part[] parts, uint256 price);
-    
     function finishCarRepair(address payable car) private {
         require(repairs[car].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[car].isConfirmed == true, "Car should confirm the car repair first!");
