@@ -81,6 +81,7 @@ contract CarRepairContract {
     function confirmCarRepair() public payable {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].price == msg.value, "Send right value!");
+        require(repairs[msg.sender].isConfirmed == false, "Already confirmed!");
         repairs[msg.sender].isConfirmed = true;
         emit confirmCarRepairEvent(repairs[msg.sender].carService, msg.sender, repairs[msg.sender].parts, repairs[msg.sender].price);
     }
@@ -100,6 +101,7 @@ contract CarRepairContract {
         require(repairs[carAddress].carService != address(0x0), "There isn't car repair for that car!");
         require(msg.sender == repairs[carAddress].carService, "No permission to do that!");
         require(repairs[carAddress].isConfirmed == true, "Car should confirm the car repair first!");
+        require(repairs[carAddress].isDone == false, "Already done!");
         repairs[carAddress].isDone = true;
         emit carRepairDoneEvent(msg.sender, carAddress, repairs[carAddress].parts, repairs[carAddress].price);
     }
@@ -111,6 +113,7 @@ contract CarRepairContract {
         require(repairs[msg.sender].carService != address(0x0), "There isn't car repair for that car!");
         require(repairs[msg.sender].isConfirmed == true, "Car should confirm the car repair first!");
         require(repairs[msg.sender].isDone == true, "Car repair should be done before approve it.");
+        require(repairs[msg.sender].isInspected == false, "Already inspected!");
         uint matching_parts = 0;
         for (uint i = 0; i < repairs[msg.sender].parts.length; i++) {
             for (uint j = 0; j < parts.length; j++) {
@@ -145,9 +148,9 @@ contract CarRepairContract {
     
     function finishCarRepair(address payable car) private {
         require(repairs[car].carService != address(0x0), "There isn't car repair for that car!");
-        require(repairs[car].isConfirmed, "Car should confirm the car repair first!");
-        require(repairs[car].isDone, "Car repair should be done before approve it.");
-        require(repairs[car].isInspected, "Car repair should be inspected before finish it!");
+        require(repairs[car].isConfirmed == true, "Car should confirm the car repair first!");
+        require(repairs[car].isDone == true, "Car repair should be done before approve it.");
+        require(repairs[car].isInspected == true, "Car repair should be inspected before finish it!");
         if (repairs[car].isApproved) {
             repairs[car].carService.transfer(repairs[car].carServiceStake + repairs[car].price);
         } else {
